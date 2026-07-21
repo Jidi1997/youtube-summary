@@ -1,0 +1,3 @@
+# Ultra-lightweight dependencies (~3.5 MB total, 1-2 seconds installation)
+yt-dlp>=2025.1.15
+youtube-transcript-api>=0.6.2

@@ -1,0 +1,51 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments
+.env
+.venv
+.uv-cache/
+venv/
+ENV/
+env.bak
+venv.bak
+
+# Local storage and data directories
+storage/
+
+# Local legacy backup
+v1_full_asr/
+
+# AGY Agent files
+.agents/
+.gemini/
