@@ -29,7 +29,7 @@ def handle_initialize(req_id):
                 }
             },
             "serverInfo": {
-                "name": "agentic-youtube-summary",
+                "name": "youtube-summary",
                 "version": "2.0.0"
             }
         }

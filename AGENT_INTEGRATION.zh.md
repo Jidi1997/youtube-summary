@@ -1,6 +1,6 @@
 # AI 智能体 MCP 集成指南
 
-本指南介绍如何将 **Agentic YouTube Summary** 作为 MCP (Model Context Protocol) 工具接入主流 AI 编程助手（如 **Cursor**、**Claude Code**、**Cline**、**Windsurf** 及 **Claude Desktop**）。
+本指南介绍如何将 **YouTube Summary** 作为 MCP (Model Context Protocol) 工具接入主流 AI 编程助手（如 **Cursor**、**Claude Code**、**Cline**、**Windsurf** 及 **Claude Desktop**）。
 
 接入后，您只需在聊天框中使用自然语言（例如：“*帮我总结这个视频：https://www.youtube.com/watch?v=PDZf7EiKwyw*”），编程助手就会自动调用后台服务完成处理并展示结构化报告。
 

@@ -91,7 +91,7 @@ def process_single_video(url, max_revisions=3):
 def main():
     urls = sys.argv[1:]
     if not urls:
-        print("🎥 Agentic YouTube Summary 🎥")
+        print("🎥 YouTube Summary 🎥")
         print("Please enter YouTube URL(s):")
         try:
             user_input = input("> ").strip()

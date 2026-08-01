@@ -1,6 +1,6 @@
 # AI Agent MCP Integration Guide
 
-This guide explains how to register **Agentic YouTube Summary** as an MCP (Model Context Protocol) tool in modern AI coding assistants (such as **Cursor**, **Claude Code**, **Cline**, **Windsurf**, and **Claude Desktop**).
+This guide explains how to register **YouTube Summary** as an MCP (Model Context Protocol) tool in modern AI coding assistants (such as **Cursor**, **Claude Code**, **Cline**, **Windsurf**, and **Claude Desktop**).
 
 Once configured, you can simply ask your coding assistant in plain chat (e.g. *"Summarize this YouTube video: https://www.youtube.com/watch?v=PDZf7EiKwyw"*), and the agent will automatically execute the tool.
 
