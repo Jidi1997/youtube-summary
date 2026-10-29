@@ -51,7 +51,7 @@ pip install -r requirements.txt
 
 ```ini
 GEMINI_API_KEY=          # 可选 — 启用自动摘要与质量校验
-GEMINI_MODEL=gemini-2.5-flash   # 可选 — 摘要使用的模型
+GEMINI_MODEL=gemini-1.5-flash   # 可选 — 摘要使用的模型（或 gemini-2.0-flash）
 GROQ_API_KEY=            # 可选 — 为无字幕视频启用 Whisper 语音转写
 ```
 

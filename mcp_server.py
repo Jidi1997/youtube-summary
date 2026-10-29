@@ -120,13 +120,19 @@ def handle_tools_call(req_id, params):
                         with open(summary_file, 'r', encoding='utf-8') as f:
                             summary_content = f.read()
                             
+                    transcript_content = ""
+                    if os.path.exists(transcript_file):
+                        with open(transcript_file, 'r', encoding='utf-8') as f:
+                            transcript_content = f.read()
+
                     results.append({
                         "url": url,
                         "success": True,
                         "title": title,
                         "summary_path": summary_file if os.path.exists(summary_file) else None,
                         "transcript_path": transcript_file if os.path.exists(transcript_file) else None,
-                        "summary": summary_content
+                        "summary": summary_content,
+                        "transcript": transcript_content
                     })
                 else:
                     results.append({

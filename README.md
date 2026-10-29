@@ -51,7 +51,7 @@ Copy `.env.example` to `.env`. Fill in the keys you have:
 
 ```ini
 GEMINI_API_KEY=          # optional — enables auto-summary and quality verification
-GEMINI_MODEL=gemini-2.5-flash   # optional — default model for summaries
+GEMINI_MODEL=gemini-1.5-flash   # optional — default model for summaries (or gemini-2.0-flash)
 GROQ_API_KEY=            # optional — enables Whisper ASR for videos without subtitles
 ```
 

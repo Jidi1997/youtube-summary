@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import urllib.request
 import urllib.error
@@ -81,7 +82,6 @@ def generate_summary_draft(metadata, transcript_text, feedback_report=None):
             except Exception:
                 pass
                 
-    import re
     if not language or language in ("auto", "unknown"):
         if re.search(r'[\u4e00-\u9fff]', transcript_text):
             language = "zh"

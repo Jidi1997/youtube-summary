@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import config
 from summarizer import call_gemini_rest_api
 
