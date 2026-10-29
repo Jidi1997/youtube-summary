@@ -185,6 +185,8 @@ def download_subtitles(url, video_id):
         
     downloaded_files = glob.glob(os.path.join(config.METADATA_DIR, f"{video_id}.*.vtt"))
     if not downloaded_files:
+        if not config.GROQ_API_KEY:
+            raise DownloadError(f"No subtitles found for video ID: {video_id} (ASR skipped: GROQ_API_KEY not set).")
         print(f"No subtitles found for video ID: {video_id}. Attempting ASR fallback...")
         output_audio_template = os.path.join(config.METADATA_DIR, f"{video_id}.%(ext)s")
         audio_cmd = [
