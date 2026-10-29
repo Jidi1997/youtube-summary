@@ -1,100 +1,118 @@
-# YouTube Summary (YouTube 视频字幕与 AI 摘要管线)
+# YouTube Summary
 
 [English](README.md) | [中文](README.zh.md)
 
----
+<p align="center"><b>粘贴一条 YouTube 链接，获取干净的逐字稿和结构化摘要。</b><br>
+<sub>两个 Python 文件，三个依赖，外加一个可选的 MCP 服务。全部在本地运行。</sub></p>
 
-**YouTube Summary** 是一个专为高效获取视频信息设计的自动化工作流工具。它可以自动下载 YouTube 视频字幕、智能清洗滚动字幕的重复噪声，并生成结构清晰的 AI 内容摘要。本工具既可以作为独立的命令行工具使用，也可以通过 MCP (Model Context Protocol) 协议无缝集成到 AI 编程助手（如 Cursor、Claude Code、Cline、Windsurf）中。
-
----
-
-### ✨ 核心功能与工作原理
-
-- **多策略音频/字幕提取**：
-  - **字幕优先**：优先通过 `youtube-transcript-api` 与 `yt-dlp` 获取官方或自动生成的字幕。
-  - **音频与 Whisper 降级**：若视频无字幕，自动使用 `yt-dlp` 下载 `.m4a` 格式音频轨道，并调用 Groq Cloud Whisper API (`whisper-large-v3`) 进行高精度语音转文字。
-- **智能文本去重清洗**：解析 WebVTT/SRT 格式，消除自动字幕中因滑动产生的重合重复字句，智能重组为易读的常规段落。
-- **结构化 AI 摘要**：生成包含一句话总结、核心要点与分章节大纲的完整 Markdown 报告。
-- **双层自我修正质检**：从准确性、完整度与精炼度维度对草稿进行评估打分，确保输出质量稳定可靠。
-- **双模运行机制**：
-  - **API 模式**：配置 API 密钥后，自动调用 Gemini API 进行摘要生成与迭代质检。
-  - **智能体协同模式**：免 Key 运行，仅在本地提取并清洗字幕后回传，由 AI 助手在对话中免费生成总结。
+<p align="center">
+<a href="https://github.com/Jidi1997/youtube-summary/stargazers"><img src="https://img.shields.io/github/stars/Jidi1997/youtube-summary?style=flat-square" alt="GitHub stars"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/Jidi1997/youtube-summary?style=flat-square" alt="MIT license"></a>
+</p>
 
 ---
 
-### 📁 项目结构
+看视频很花时间。YouTube Summary 帮你提取字幕、清除自动字幕的重复噪声，然后生成一份几分钟就能读完的 Markdown 报告。
 
-```text
-youtube_processor/
-├── config.py             # 系统配置与运行目录管理
-├── downloader.py         # 字幕提取与元数据获取
-├── cleaner.py            # 字幕文本去重与段落重组
-├── summarizer.py         # AI 摘要生成引擎
-├── verifier.py           # 摘要质量校验层
-├── main.py               # 命令行入口脚本
-├── mcp_server.py         # MCP 服务实现
-├── requirements.txt      # 项目依赖
-├── AGENT_INTEGRATION.zh.md # 智能体集成指南
-└── .env.example          # 环境变量配置模板
+它既可以作为命令行工具使用，也可以作为 MCP 服务接入 AI 编程助手（Cursor、Claude Code、Cline、Windsurf、Antigravity）。
+
+## 工作流程
+
+1. **提取字幕。** 按以下顺序依次尝试三种来源：
+   - 通过 `youtube-transcript-api` 获取官方或自动生成的字幕。
+   - 通过 `yt-dlp` 下载字幕文件。
+   - 通过 `yt-dlp` 下载音频轨道，再调用 Groq Whisper (`whisper-large-v3`) 转写为文字。
+
+2. **清洗文本。** 自动字幕会在重叠的时间窗口中产生大量重复片段。清洗器去除 WebVTT 标签，合并重复段落，输出连贯可读的正文。
+
+3. **生成摘要。** 配置了 Gemini API Key 后，工具自动生成结构化 Markdown 报告（核心概要、要点提炼、分章节大纲），并执行多轮质量评估。未配置 Key 时，工具保存清洗后的逐字稿，由你的 AI 助手在对话中完成总结。
+
+## 安装
+
+需要 Python 3.9 及以上版本和 `ffmpeg`。
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu / Debian
+sudo apt update && sudo apt install ffmpeg
 ```
 
----
+克隆仓库并安装依赖：
 
-### 🛠️ 环境准备与安装
-
-#### 1. 系统依赖
-本工具依赖 `ffmpeg` 进行媒体处理。
-- **macOS**: `brew install ffmpeg`
-- **Ubuntu/Debian**: `sudo apt update && sudo apt install ffmpeg`
-
-#### 2. Python 依赖安装
 ```bash
+git clone https://github.com/Jidi1997/youtube-summary.git
+cd youtube-summary
 pip install -r requirements.txt
 ```
 
-#### 3. 配置文件 (`.env`)
-复制 `.env.example` 为 `.env` 并填写 API 密钥：
+将 `.env.example` 复制为 `.env`，按需填写：
+
 ```ini
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_API_KEY=          # 可选 — 启用自动摘要与质量校验
+GEMINI_MODEL=gemini-2.5-flash   # 可选 — 摘要使用的模型
+GROQ_API_KEY=            # 可选 — 为无字幕视频启用 Whisper 语音转写
 ```
 
----
+留空即跳过对应功能。不填任何 Key 也能正常运行。
 
-### 💻 使用指南
+## 使用
 
-#### 命令行方式 (CLI)
-处理单个或多个 YouTube 视频链接：
+### 命令行
+
 ```bash
-python main.py "https://www.youtube.com/watch?v=PDZf7EiKwyw"
+python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-- **清洗后的文本**：保存至 `storage/transcripts/`
-- **总结报告文件**：保存至 `storage/metadata/`
+清洗后的逐字稿保存在 `storage/transcripts/`，摘要保存在 `storage/metadata/`。
 
-#### 编程助手嵌入集成 (MCP)
-在您的 AI 编程助手 MCP 设置中添加 `mcp_server.py`：
+### MCP 服务（AI 助手集成）
+
+在你的 AI 编程助手 MCP 设置中添加：
 
 ```json
 {
   "mcpServers": {
     "youtube-summary": {
       "command": "python3",
-      "args": [
-        "/绝对路径/to/youtube_processor/mcp_server.py"
-      ],
+      "args": ["/你的绝对路径/youtube-summary/mcp_server.py"],
       "env": {
-        "GEMINI_API_KEY": "您的API密钥"
+        "GEMINI_API_KEY": "你的密钥"
       }
     }
   }
 }
 ```
 
-详细接入说明请参阅 [**AGENT_INTEGRATION.zh.md**](AGENT_INTEGRATION.zh.md)。
+然后在对话框中直接说：*"帮我总结这个视频：https://www.youtube.com/watch?v=..."* — 助手会自动调用工具并展示报告。
 
----
+完整接入指南请参阅 [AGENT_INTEGRATION.zh.md](AGENT_INTEGRATION.zh.md)。
 
-## 开源许可证
+## 双模运行
 
-本项目遵循 [MIT License](LICENSE) 开源许可证。
+| 模式 | 条件 | 行为 |
+|---|---|---|
+| **API 模式** | 配置了 `GEMINI_API_KEY` | 自动生成摘要，从准确性和完整度两个维度评分，最多修订三轮。 |
+| **智能体协同模式** | 未配置 Key | 仅提取并清洗逐字稿。由你的 AI 助手读取文本并在对话中生成总结。 |
+
+## 项目结构
+
+```text
+youtube-summary/
+├── main.py               # 命令行入口
+├── downloader.py          # 字幕与音频提取
+├── cleaner.py             # 文本去重与段落格式化
+├── summarizer.py          # 基于 Gemini 的摘要生成
+├── verifier.py            # 多轮质量评分
+├── mcp_server.py          # MCP 服务（JSON-RPC over stdio）
+├── config.py              # 路径与环境变量加载
+├── requirements.txt       # yt-dlp, youtube-transcript-api
+├── .env.example           # 环境变量模板
+├── AGENT_INTEGRATION.md   # MCP 接入指南（英文）
+└── AGENT_INTEGRATION.zh.md # MCP 接入指南（中文）
+```
+
+## 开源许可
+
+MIT

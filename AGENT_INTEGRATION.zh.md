@@ -1,14 +1,14 @@
-# AI 智能体 MCP 集成指南
+# MCP 集成指南
 
-本指南介绍如何将 **YouTube Summary** 作为 MCP (Model Context Protocol) 工具接入主流 AI 编程助手（如 **Cursor**、**Claude Code**、**Cline**、**Windsurf** 及 **Claude Desktop**）。
+本指南介绍如何将 **YouTube Summary** 作为 MCP 工具接入 AI 编程助手。
 
-接入后，您只需在聊天框中使用自然语言（例如：“*帮我总结这个视频：https://www.youtube.com/watch?v=PDZf7EiKwyw*”），编程助手就会自动调用后台服务完成处理并展示结构化报告。
+接入后，在对话框中直接说 *"帮我总结这个视频：https://www.youtube.com/watch?v=..."*，助手会自动调用工具并展示报告。
 
 ---
 
-### 1. 一键 MCP 配置
+## 1. 添加 MCP 服务
 
-在您的 AI 编程助手 MCP 设置中，添加以下 JSON 配置：
+在你的 AI 编程助手 MCP 设置中添加以下配置（Cursor、Claude Code、Cline、Windsurf、Claude Desktop 或 Antigravity 均适用）：
 
 ```json
 {
@@ -16,10 +16,10 @@
     "youtube-summary": {
       "command": "python3",
       "args": [
-        "/绝对路径/to/youtube_processor/mcp_server.py"
+        "/你的绝对路径/youtube-summary/mcp_server.py"
       ],
       "env": {
-        "GEMINI_API_KEY": "您的Gemini_API密钥"
+        "GEMINI_API_KEY": "你的密钥"
       }
     }
   }
@@ -27,36 +27,34 @@
 ```
 
 > [!NOTE]
-> 请将 `/绝对路径/to/youtube_processor` 替换为您本地解压/克隆该仓库的真实绝对路径。
+> 将 `/你的绝对路径/youtube-summary` 替换为本地实际路径。
 
 ---
 
-### 2. 双模运行机制
+## 2. 双模运行
 
-1. **API 自动化模式（带 Key）**：
-   - 当配置了 `GEMINI_API_KEY` 时，服务通过 API 自动完成视频处理与质量打分，直接在对话框中输出完成的 Markdown 总结。
-2. **智能体协同模式（无 Key 零配置）**：
-   - 若未填写 `GEMINI_API_KEY`，程序自动完成字幕抓取与文本去重，并将干净文本直接回传给当前的 AI 编程助手，由助手在对话框中为您生成总结。
+| 模式 | 条件 | 行为 |
+|---|---|---|
+| **API 模式** | 配置了 `GEMINI_API_KEY` | 自动处理视频、评分摘要质量，并返回完整的 Markdown 报告。 |
+| **智能体协同模式** | Key 留空 | 仅提取并清洗逐字稿。由你的 AI 助手读取文本并在对话中生成总结。 |
 
 ---
 
-### 3. 工具声明规范 (JSON Schema)
+## 3. 工具声明
 
-若需在自定义插件中手动声明工具字段：
+如需手动注册工具，使用以下 JSON Schema：
 
 ```json
 {
   "name": "youtube_transcript_summarizer",
-  "description": "下载 YouTube 字幕，清洗滚动重复文本，并为一个或多个视频链接生成结构化摘要。",
+  "description": "下载 YouTube 字幕，清洗滚动重复文本，生成结构化摘要。",
   "parameters": {
     "type": "object",
     "properties": {
       "urls": {
         "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "description": "YouTube 视频 URL 或 ID 列表。"
+        "items": { "type": "string" },
+        "description": "一个或多个 YouTube 视频 URL 或 ID。"
       }
     },
     "required": ["urls"]
@@ -66,14 +64,14 @@
 
 ---
 
-### 4. 智能体系统提示词建议 (System Prompt)
+## 4. 系统提示词
 
-您可以将以下提示词添加到编程助手的 Custom Instructions 中：
+在编程助手的 Custom Instructions 中添加：
 
 ```text
-你拥有调用 `youtube_transcript_summarizer` 工具的能力。
-当用户请求总结或分析一个或多个 YouTube 视频时：
-1. 从对话中提取视频 URL。
-2. 调用工具 `youtube_transcript_summarizer`，传入 `{"urls": ["..."]}`。
-3. 将返回的 Markdown 结构化摘要呈现在聊天界面中。
+你可以调用 `youtube_transcript_summarizer` 工具。
+当用户要求总结一个或多个 YouTube 视频时：
+1. 从消息中提取视频 URL。
+2. 调用 `youtube_transcript_summarizer`，传入 {"urls": ["..."]}。
+3. 将 Markdown 摘要展示给用户。
 ```

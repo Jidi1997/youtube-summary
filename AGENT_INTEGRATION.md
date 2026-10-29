@@ -1,14 +1,14 @@
-# AI Agent MCP Integration Guide
+# MCP Integration Guide
 
-This guide explains how to register **YouTube Summary** as an MCP (Model Context Protocol) tool in modern AI coding assistants (such as **Cursor**, **Claude Code**, **Cline**, **Windsurf**, and **Claude Desktop**).
+This guide shows how to add **YouTube Summary** as an MCP tool in your AI coding assistant.
 
-Once configured, you can simply ask your coding assistant in plain chat (e.g. *"Summarize this YouTube video: https://www.youtube.com/watch?v=PDZf7EiKwyw"*), and the agent will automatically execute the tool.
+After setup, ask in chat — *"Summarize this video: https://www.youtube.com/watch?v=..."* — and the assistant calls the tool automatically.
 
 ---
 
-### 1. 1-Step MCP Configuration
+## 1. Add the MCP server
 
-Add the following block to your agent's MCP configuration settings:
+Put this block in your assistant's MCP configuration (Cursor, Claude Code, Cline, Windsurf, Claude Desktop, or Antigravity):
 
 ```json
 {
@@ -16,10 +16,10 @@ Add the following block to your agent's MCP configuration settings:
     "youtube-summary": {
       "command": "python3",
       "args": [
-        "/absolute/path/to/youtube_processor/mcp_server.py"
+        "/absolute/path/to/youtube-summary/mcp_server.py"
       ],
       "env": {
-        "GEMINI_API_KEY": "your_gemini_api_key_here"
+        "GEMINI_API_KEY": "your_key_here"
       }
     }
   }
@@ -27,36 +27,34 @@ Add the following block to your agent's MCP configuration settings:
 ```
 
 > [!NOTE]
-> Replace `/absolute/path/to/youtube_processor` with the actual local folder path on your computer.
+> Replace `/absolute/path/to/youtube-summary` with the actual path on your computer.
 
 ---
 
-### 2. Supported Execution Modes
+## 2. Two modes
 
-1. **Automated API Mode (Default with Key)**:
-   - When `GEMINI_API_KEY` is provided in `env`, the tool automatically processes the video, evaluates summary quality, and returns the complete Markdown report to your chat interface.
-2. **Agent-Cooperative Mode (Zero-Key Setup)**:
-   - If `GEMINI_API_KEY` is left empty, the tool extracts and cleans the video transcript, passing the clean text directly to your AI Coding Assistant for in-chat summary generation.
+| Mode | Condition | Behavior |
+|---|---|---|
+| **API mode** | `GEMINI_API_KEY` is set | The tool processes the video, scores the summary, and returns the complete Markdown report. |
+| **Agent-cooperative mode** | Key is empty | The tool extracts and cleans the transcript. Your assistant reads the clean text and writes the summary in chat. |
 
 ---
 
-### 3. Tool Definition (JSON Schema)
+## 3. Tool schema
 
-If registering tools manually in custom agent configurations:
+Use this schema if your agent framework needs a manual tool declaration:
 
 ```json
 {
   "name": "youtube_transcript_summarizer",
-  "description": "Downloads YouTube subtitles, cleans scrolling repetitive text, and generates structured summaries for video URLs.",
+  "description": "Download YouTube subtitles, clean scrolling text, and generate a structured summary.",
   "parameters": {
     "type": "object",
     "properties": {
       "urls": {
         "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "description": "List of YouTube video URLs or Video IDs."
+        "items": { "type": "string" },
+        "description": "One or more YouTube video URLs or IDs."
       }
     },
     "required": ["urls"]
@@ -66,14 +64,14 @@ If registering tools manually in custom agent configurations:
 
 ---
 
-### 4. System Prompt Guidance for Agents
+## 4. System prompt snippet
 
-You can add this snippet to your agent's custom instructions:
+Add this to your assistant's custom instructions:
 
 ```text
-You have access to the tool `youtube_transcript_summarizer`.
-When the user asks to summarize or extract key points from one or more YouTube URLs:
-1. Parse the video URLs from chat.
-2. Call `youtube_transcript_summarizer` with `{"urls": ["..."]}`.
-3. Present the resulting structured Markdown summary directly to the user.
+You have a tool called `youtube_transcript_summarizer`.
+When the user asks to summarize one or more YouTube videos:
+1. Extract the video URLs from the message.
+2. Call `youtube_transcript_summarizer` with {"urls": ["..."]}.
+3. Show the Markdown summary to the user.
 ```
