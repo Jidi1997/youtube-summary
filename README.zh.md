@@ -21,7 +21,7 @@
 1. **提取字幕。** 按以下顺序依次尝试三种来源：
    - 通过 `youtube-transcript-api` 获取官方或自动生成的字幕。
    - 通过 `yt-dlp` 下载字幕文件。
-   - 通过 `yt-dlp` 下载音频轨道，再调用 Groq Whisper (`whisper-large-v3`) 转写为文字。
+   - 通过 `yt-dlp` 下载音频轨道，再调用 Gemini 多模态原生听音（或 Groq Whisper）转写为文字。
 
 2. **清洗文本。** 自动字幕会在重叠的时间窗口中产生大量重复片段。清洗器去除 WebVTT 标签，合并重复段落，输出连贯可读的正文。
 
@@ -50,9 +50,9 @@ pip install -r requirements.txt
 将 `.env.example` 复制为 `.env`，按需填写：
 
 ```ini
-GEMINI_API_KEY=          # 可选 — 启用自动摘要与质量校验
-GEMINI_MODEL=gemini-1.5-flash   # 可选 — 摘要使用的模型（或 gemini-2.0-flash）
-GROQ_API_KEY=            # 可选 — 为无字幕视频启用 Whisper 语音转写
+GEMINI_API_KEY=          # 可选 — 启用自动摘要与 Gemini 多模态原生听音
+GEMINI_MODEL=gemini-1.5-flash   # 可选 — 摘要使用的模型（或 gemini-2.5-flash）
+GROQ_API_KEY=            # 可选 — 备用 Whisper 语音转写（无字幕视频）
 ```
 
 留空即跳过对应功能。不填任何 Key 也能正常运行。

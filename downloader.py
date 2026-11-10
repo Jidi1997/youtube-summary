@@ -3,9 +3,14 @@ import subprocess
 import json
 import glob
 import re
+import base64
+import ssl
+import time
 import urllib.request
 import urllib.error
 import config
+
+SSL_CONTEXT = ssl._create_unverified_context()
 
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
@@ -83,6 +88,103 @@ def update_meta_language(video_id, language_code):
                 json.dump(meta, f, indent=4, ensure_ascii=False)
         except Exception:
             pass
+
+def transcribe_audio_gemini(audio_path, video_id):
+    gemini_key = config.GEMINI_API_KEY or os.environ.get("GEMINI_API_KEY", "")
+    if not gemini_key:
+        raise DownloadError("GEMINI_API_KEY is not configured.")
+
+    print(f"Transcribing audio via Gemini Multimodal Audio API for video ID: {video_id}...")
+
+    # Normalize/compress audio to 16kHz mono 24k MP3 for rapid upload and minimal tokens
+    compressed_audio = os.path.join(config.METADATA_DIR, f"{video_id}_opt.mp3")
+    target_audio = audio_path
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-i", audio_path,
+            "-ac", "1", "-ar", "16000", "-b:a", "24k",
+            compressed_audio
+        ]
+        subprocess.run(cmd, capture_output=True, check=True)
+        if os.path.exists(compressed_audio) and os.path.getsize(compressed_audio) > 0:
+            target_audio = compressed_audio
+    except Exception as e:
+        print(f"ffmpeg audio optimization skipped ({e}), using raw audio.")
+
+    try:
+        with open(target_audio, "rb") as f:
+            audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+    finally:
+        if os.path.exists(compressed_audio):
+            try:
+                os.remove(compressed_audio)
+            except Exception:
+                pass
+
+    prompt = (
+        "你是一位顶尖的多模态语音识别与速记专家。请对这段音频进行完整、详尽的高保真事实转录（Transcript）。\n"
+        "要求：\n"
+        "1. 尽可能完整地记录说话人的所有核心论述、案例细节、逻辑推演和关键数据，保持口语原话的真实性，严禁虚构；\n"
+        "2. 按照讲话顺序分段呈现，格式输出带有清晰语义分段与说话人标记的详尽文本；\n"
+        "3. 若为中文音频请直接输出规范中文，英文音频请输出规范英文。"
+    )
+
+    models_to_try = ["gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.6-flash"]
+    last_err = None
+
+    for model in models_to_try:
+        print(f"[*] Trying Gemini Multimodal Audio (Model: {model})...")
+        for attempt in range(1, 4):
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{
+                        "parts": [
+                            {"inlineData": {"mimeType": "audio/mp3", "data": audio_b64}},
+                            {"text": prompt}
+                        ]
+                    }]
+                }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, context=SSL_CONTEXT, timeout=180) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+                    candidate = resp_data.get("candidates", [{}])[0]
+                    text = candidate.get("content", {}).get("parts", [{}])[0].get("text", "")
+                    if text:
+                        txt_path = os.path.join(config.METADATA_DIR, f"{video_id}.txt")
+                        with open(txt_path, "w", encoding="utf-8") as f:
+                            f.write(text.strip())
+                        print(f"Gemini Multimodal Audio transcription complete ({len(text)} chars). Saved to {txt_path}")
+                        return txt_path
+            except urllib.error.HTTPError as e:
+                err_body = ""
+                try:
+                    err_body = e.read().decode("utf-8")
+                except Exception:
+                    pass
+                if e.code in [500, 502, 503, 504]:
+                    wait_time = 2 ** attempt
+                    print(f"[⚠️] Gemini Audio {model} HTTP {e.code}. Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                elif e.code == 429:
+                    print(f"[⚠️] Gemini Audio {model} rate limited (429): {err_body[:100]}. Drifting to next model...")
+                    last_err = e
+                    break
+                else:
+                    print(f"[⚠️] Gemini Audio {model} error: {e.code} - {err_body[:200]}")
+                    last_err = e
+                    break
+            except Exception as e:
+                print(f"[⚠️] Gemini Audio {model} error: {e}")
+                last_err = e
+                break
+
+    raise DownloadError(f"Gemini Multimodal Audio transcription failed: {last_err}")
 
 def transcribe_audio_groq(audio_path, video_id):
     groq_key = config.GROQ_API_KEY
@@ -185,16 +287,26 @@ def download_subtitles(url, video_id):
         
     downloaded_files = glob.glob(os.path.join(config.METADATA_DIR, f"{video_id}.*.vtt"))
     if not downloaded_files:
-        if not config.GROQ_API_KEY:
-            raise DownloadError(f"No subtitles found for video ID: {video_id} (ASR skipped: GROQ_API_KEY not set).")
-        print(f"No subtitles found for video ID: {video_id}. Attempting ASR fallback...")
+        existing_txt = os.path.join(config.METADATA_DIR, f"{video_id}.txt")
+        if os.path.exists(existing_txt) and os.path.getsize(existing_txt) > 50:
+            print(f"Found existing transcript at: {existing_txt}")
+            return existing_txt, False
+
+        has_gemini = bool(config.GEMINI_API_KEY or os.environ.get("GEMINI_API_KEY"))
+        has_groq = bool(config.GROQ_API_KEY or os.environ.get("GROQ_API_KEY"))
+        if not has_gemini and not has_groq:
+            raise DownloadError(f"No subtitles found for video ID: {video_id} (ASR skipped: GEMINI_API_KEY / GROQ_API_KEY not set).")
+
+        print(f"No subtitles found for video ID: {video_id}. Attempting native Multimodal ASR fallback...")
         output_audio_template = os.path.join(config.METADATA_DIR, f"{video_id}.%(ext)s")
         audio_cmd = [
-            "yt-dlp", "-x", "--audio-format", "m4a", "-f", "ba[ext=m4a]/ba",
+            "yt-dlp", "--no-update",
+            "--extractor-args", "youtube:player_client=android,ios,mweb",
+            "-x", "--audio-format", "mp3", "--audio-quality", "32k",
             "-o", output_audio_template, "--no-playlist", url
         ]
-        audio_extensions = {".m4a", ".webm", ".opus", ".mp3", ".wav"}
-        temp_extensions = {".part", ".ytdl", ".temp"}
+        audio_extensions = {".mp3", ".m4a", ".webm", ".opus", ".wav"}
+        temp_extensions = {".part", ".ytdl", ".temp", ".mp4"}
         
         try:
             print("Downloading audio track via yt-dlp...")
@@ -209,13 +321,12 @@ def download_subtitles(url, video_id):
             if not audio_path:
                 raise DownloadError(f"Audio file was not created in {config.METADATA_DIR}")
                 
-            if config.GROQ_API_KEY:
+            if has_gemini:
+                txt_path = transcribe_audio_gemini(audio_path, video_id)
+            elif has_groq:
                 txt_path = transcribe_audio_groq(audio_path, video_id)
             else:
-                raise DownloadError(
-                    "No subtitles found for this video. To transcribe audio via fast cloud API,\n"
-                    "set GROQ_API_KEY=your_key in your .env file."
-                )
+                raise DownloadError("No ASR engine configured.")
                     
             update_meta_language(video_id, "auto")
             return txt_path, False

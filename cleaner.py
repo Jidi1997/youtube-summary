@@ -74,6 +74,11 @@ def clean_formatted_transcript(txt_content):
     if not txt_content or not txt_content.strip():
         return ""
 
+    # If already a structured transcript without timestamps (e.g. from Gemini Multimodal Audio), preserve directly
+    has_timestamps = bool(re.search(r'\[\d+(?:\.\d+)?\]', txt_content))
+    if not has_timestamps:
+        return txt_content.strip()
+
     lines = txt_content.split('\n')
     cleaned_sentences = []
     for line in lines:

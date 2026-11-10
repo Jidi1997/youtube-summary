@@ -21,7 +21,7 @@ It works as a command-line tool or as an MCP server inside AI coding assistants 
 1. **Gets the transcript.** It tries three sources, in order:
    - Official or auto-generated subtitles, via `youtube-transcript-api`.
    - Subtitle files downloaded by `yt-dlp`.
-   - Audio track downloaded by `yt-dlp`, transcribed by Groq Whisper (`whisper-large-v3`).
+   - Audio track downloaded by `yt-dlp`, transcribed by Gemini Multimodal Audio (or Groq Whisper).
 
 2. **Cleans the text.** Auto-captions repeat words across overlapping time windows. The cleaner strips WebVTT tags, merges duplicate segments, and joins the result into readable paragraphs.
 
@@ -50,9 +50,9 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env`. Fill in the keys you have:
 
 ```ini
-GEMINI_API_KEY=          # optional — enables auto-summary and quality verification
-GEMINI_MODEL=gemini-1.5-flash   # optional — default model for summaries (or gemini-2.0-flash)
-GROQ_API_KEY=            # optional — enables Whisper ASR for videos without subtitles
+GEMINI_API_KEY=          # optional — enables auto-summary and multimodal audio ASR
+GEMINI_MODEL=gemini-1.5-flash   # optional — default model for summaries (or gemini-2.5-flash)
+GROQ_API_KEY=            # optional — alternative Whisper ASR for videos without subtitles
 ```
 
 Leave a key empty to skip that feature. The tool still works with no keys at all.
